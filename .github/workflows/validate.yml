@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -24,8 +27,12 @@ jobs:
       - name: validate
         run: tofu validate
 
-      - name: validate example
-        working-directory: examples/basic
+      - name: test
+        run: tofu test
+
+      - name: validate examples
         run: |
-          tofu init -backend=false
-          tofu validate
+          for dir in examples/*/; do
+            echo "==> $dir"
+            (cd "$dir" && tofu init -backend=false && tofu validate)
+          done
