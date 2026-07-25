@@ -17,3 +17,8 @@ output "public_ip_address" {
   description = "Public IPv4 address of the instance, if enabled."
   value       = google_sql_database_instance.this.public_ip_address
 }
+
+output "private_ip_address" {
+  description = "Private IP address of the instance, if a private_network is attached."
+  value       = google_sql_database_instance.this.private_ip_address
+}

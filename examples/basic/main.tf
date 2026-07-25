@@ -4,7 +4,7 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = ">= 5.0"
+      version = ">= 5.10"
     }
   }
 }
@@ -17,12 +17,16 @@ provider "google" {
 module "cloud_sql" {
   source = "../.."
 
-  project_id          = var.project_id
-  name                = "example-postgres"
-  region              = var.region
-  database_version    = "POSTGRES_15"
-  tier                = "db-f1-micro"
-  deletion_protection = false
+  project_id       = var.project_id
+  name             = "example-postgres"
+  region           = var.region
+  database_version = "POSTGRES_15"
+  tier             = "db-f1-micro"
+
+  # Throwaway example instance, so both deletion guards are off to keep it
+  # destroyable. Leave them at their default of true for anything real.
+  deletion_protection         = false
+  deletion_protection_enabled = false
 }
 
 variable "project_id" {
