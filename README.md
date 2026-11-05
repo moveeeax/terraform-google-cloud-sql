@@ -30,7 +30,7 @@ material passes through this module's state.
 
 ```hcl
 module "cloud_sql" {
-  source = "github.com/moveeeax/terraform-google-cloud-sql"
+  source = "github.com/moveeeax/terraform-google-cloud-sql?ref=v1.0.0"
 
   project_id        = var.project_id
   name              = "prod-db"
@@ -53,7 +53,10 @@ network prerequisites) and [`examples/private-ip`](examples/private-ip)
 | Name      | Version  |
 |-----------|----------|
 | terraform | >= 1.5   |
-| google    | >= 5.10  |
+| google    | >= 5.10, < 9.0 |
+
+CI validates and tests the module against the 5.10.0 floor and the latest 8.x
+release; 9.x is excluded until it has been tested.
 
 `terraform test` (`tests/`) additionally requires Terraform or OpenTofu >= 1.7
 for `mock_provider`; the module itself does not.
