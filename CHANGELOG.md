@@ -6,6 +6,8 @@ All notable changes to this module are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-08
+
 ### Added
 
 - `database_flags`: set Cloud SQL database flags as a map of name to value.
@@ -28,6 +30,7 @@ All notable changes to this module are documented here. The format follows
 
 Initial release (`v0.1.0` points at the same commit).
 
-[Unreleased]: https://github.com/moveeeax/terraform-google-cloud-sql/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/moveeeax/terraform-google-cloud-sql/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/moveeeax/terraform-google-cloud-sql/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/moveeeax/terraform-google-cloud-sql/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/moveeeax/terraform-google-cloud-sql/releases/tag/v1.0.0
