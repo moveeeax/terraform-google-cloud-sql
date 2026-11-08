@@ -84,6 +84,8 @@ for `mock_provider`; the module itself does not.
 | `backup_location`                | Region or multi-region where backups are stored.                                   | `string`                                   | `null`              |    no    |
 | `point_in_time_recovery_enabled` | Whether point-in-time recovery is enabled. Requires `backup_enabled`.              | `bool`                                     | `true`              |    no    |
 | `retained_backups`               | Number of automated backups to keep (1–365).                                       | `number`                                   | `7`                 |    no    |
+| `database_flags`                 | Database flags as a map of name to value. Overrides the CIS baseline per flag.     | `map(string)`                              | `{}`                |    no    |
+| `cis_flags`                      | Whether to set the CIS benchmark flags for the engine in `database_version`.       | `bool`                                     | `false`             |    no    |
 
 ## Outputs
 
@@ -94,6 +96,41 @@ for `mock_provider`; the module itself does not.
 | `connection_name`   | Connection name used by the Auth proxy.          |
 | `public_ip_address` | Public IPv4 address of the instance, if enabled. |
 | `private_ip_address` | Private IP address, if a `private_network` is attached. |
+
+## Database flags
+
+`database_flags` sets any Cloud SQL
+[database flag](https://cloud.google.com/sql/docs/postgres/flags) by name:
+
+```hcl
+database_flags = {
+  log_connections = "on"
+  work_mem        = "8192"
+}
+```
+
+`cis_flags = true` adds the flags from section 6 of the CIS Google Cloud
+Platform Foundation Benchmark (v5.0.0) for the engine picked from the
+`database_version` prefix. A flag given in `database_flags` replaces the
+baseline value of the same name.
+
+| Engine     | Flags set by `cis_flags`                                                                                                                       |
+|------------|------------------------------------------------------------------------------------------------------------------------------------------------|
+| PostgreSQL | `log_connections=on`, `log_disconnections=on`, `log_min_messages=warning`, `log_min_error_statement=error`, `log_min_duration_statement=-1`, `cloudsql.enable_pgaudit=on` |
+| MySQL      | `skip_show_database=on`, `local_infile=off`                                                                                                    |
+| SQL Server | `external scripts enabled=off`, `cross db ownership chaining=off`, `remote access=off`, `3625=on`, `contained database authentication=off`     |
+
+Recommended for production: `cis_flags = true`. It is off by default so that
+upgrading the module does not change existing instances. Several of these
+flags restart the instance when they are first set (`skip_show_database`,
+`cloudsql.enable_pgaudit`, `external scripts enabled`, `remote access`,
+`3625`), so turn it on in a maintenance window. `cloudsql.enable_pgaudit`
+only loads pgAudit; run `CREATE EXTENSION pgaudit` and set `pgaudit.log`
+yourself to choose what gets audited.
+
+The CIS controls that ask for a flag to be left unset or at a non-limiting
+value (`user options`, `user connections` on SQL Server) are met by not setting
+them, so the baseline leaves them out.
 
 ## Destroying an instance
 

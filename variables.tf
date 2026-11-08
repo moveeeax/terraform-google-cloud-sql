@@ -161,3 +161,20 @@ variable "retained_backups" {
     error_message = "retained_backups must be a whole number between 1 and 365."
   }
 }
+
+variable "database_flags" {
+  description = "Database flags to set on the instance, as a map of flag name to value, e.g. { log_connections = \"on\" }. Applied on top of the CIS baseline when cis_flags is true. Some flags restart the instance when set or removed."
+  type        = map(string)
+  default     = {}
+
+  validation {
+    condition     = alltrue([for name, value in var.database_flags : trimspace(name) != "" && trimspace(value) != ""])
+    error_message = "database_flags names and values must not be empty."
+  }
+}
+
+variable "cis_flags" {
+  description = "Whether to set the CIS Google Cloud Platform Foundation Benchmark database flags for the engine in database_version. Off by default because several of these flags restart the instance when first applied."
+  type        = bool
+  default     = false
+}
