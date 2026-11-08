@@ -50,6 +50,11 @@ run "defaults_are_safe" {
     condition     = length(google_sql_database_instance.this.settings[0].ip_configuration[0].authorized_networks) == 0
     error_message = "No network should be authorized to reach the public endpoint by default."
   }
+
+  assert {
+    condition     = length(google_sql_database_instance.this.settings[0].database_flags) == 0
+    error_message = "No database flags should be set by default, so upgrading the module does not change or restart existing instances."
+  }
 }
 
 run "mysql_uses_binary_logging_for_pitr" {
@@ -223,4 +228,121 @@ run "backups_can_be_disabled_deliberately" {
     condition     = google_sql_database_instance.this.settings[0].backup_configuration[0].enabled == false
     error_message = "Disabling backups explicitly, together with PITR, should still plan."
   }
+}
+
+run "database_flags_are_passed_through" {
+  command = plan
+
+  variables {
+    database_flags = {
+      log_connections = "on"
+      work_mem        = "8192"
+    }
+  }
+
+  assert {
+    condition     = length(google_sql_database_instance.this.settings[0].database_flags) == 2
+    error_message = "Only the flags given in database_flags should be set when cis_flags is off."
+  }
+
+  assert {
+    condition     = { for flag in google_sql_database_instance.this.settings[0].database_flags : flag.name => flag.value }["work_mem"] == "8192"
+    error_message = "A database flag should be set to the value given."
+  }
+}
+
+run "cis_flags_postgres_baseline" {
+  command = plan
+
+  variables {
+    cis_flags = true
+  }
+
+  assert {
+    condition = {
+      for flag in google_sql_database_instance.this.settings[0].database_flags : flag.name => flag.value
+      } == {
+      "log_connections"            = "on"
+      "log_disconnections"         = "on"
+      "log_min_messages"           = "warning"
+      "log_min_error_statement"    = "error"
+      "log_min_duration_statement" = "-1"
+      "cloudsql.enable_pgaudit"    = "on"
+    }
+    error_message = "cis_flags on PostgreSQL should set exactly the PostgreSQL CIS baseline."
+  }
+}
+
+run "cis_flags_mysql_baseline" {
+  command = plan
+
+  variables {
+    database_version = "MYSQL_8_0"
+    cis_flags        = true
+  }
+
+  assert {
+    condition = {
+      for flag in google_sql_database_instance.this.settings[0].database_flags : flag.name => flag.value
+      } == {
+      "skip_show_database" = "on"
+      "local_infile"       = "off"
+    }
+    error_message = "cis_flags on MySQL should set exactly the MySQL CIS baseline."
+  }
+}
+
+run "cis_flags_sqlserver_baseline" {
+  command = plan
+
+  variables {
+    database_version = "SQLSERVER_2019_STANDARD"
+    cis_flags        = true
+  }
+
+  assert {
+    condition = {
+      for flag in google_sql_database_instance.this.settings[0].database_flags : flag.name => flag.value
+      } == {
+      "external scripts enabled"          = "off"
+      "cross db ownership chaining"       = "off"
+      "remote access"                     = "off"
+      "3625"                              = "on"
+      "contained database authentication" = "off"
+    }
+    error_message = "cis_flags on SQL Server should set exactly the SQL Server CIS baseline."
+  }
+}
+
+run "database_flags_override_cis_baseline" {
+  command = plan
+
+  variables {
+    cis_flags = true
+    database_flags = {
+      log_min_duration_statement = "1000"
+    }
+  }
+
+  assert {
+    condition     = length(google_sql_database_instance.this.settings[0].database_flags) == 6
+    error_message = "Overriding a baseline flag should replace it, not add a duplicate."
+  }
+
+  assert {
+    condition     = { for flag in google_sql_database_instance.this.settings[0].database_flags : flag.name => flag.value }["log_min_duration_statement"] == "1000"
+    error_message = "An explicit database_flags value should win over the CIS baseline."
+  }
+}
+
+run "rejects_empty_database_flag_value" {
+  command = plan
+
+  variables {
+    database_flags = {
+      log_connections = ""
+    }
+  }
+
+  expect_failures = [var.database_flags]
 }

@@ -4,6 +4,39 @@ locals {
   # field that does not belong to the engine is rejected by the Cloud SQL API,
   # so exactly one of the two is set and the other is left null.
   is_mysql = startswith(upper(var.database_version), "MYSQL")
+
+  engine = split("_", upper(var.database_version))[0]
+
+  # Database flag values from section 6 of the CIS Google Cloud Platform
+  # Foundation Benchmark (v5.0.0), applied only when cis_flags is true. Several
+  # of them restart the instance when first set (skip_show_database,
+  # cloudsql.enable_pgaudit, external scripts enabled, remote access, 3625), so
+  # they are opt-in rather than a default that would surprise an existing
+  # instance with a restart on the next apply.
+  cis_flags = {
+    POSTGRES = {
+      "log_connections"            = "on"
+      "log_disconnections"         = "on"
+      "log_min_messages"           = "warning"
+      "log_min_error_statement"    = "error"
+      "log_min_duration_statement" = "-1"
+      "cloudsql.enable_pgaudit"    = "on"
+    }
+    MYSQL = {
+      "skip_show_database" = "on"
+      "local_infile"       = "off"
+    }
+    SQLSERVER = {
+      "external scripts enabled"          = "off"
+      "cross db ownership chaining"       = "off"
+      "remote access"                     = "off"
+      "3625"                              = "on"
+      "contained database authentication" = "off"
+    }
+  }
+
+  # Explicit database_flags win over the CIS baseline for the same flag name.
+  database_flags = merge(var.cis_flags ? local.cis_flags[local.engine] : {}, var.database_flags)
 }
 
 resource "google_sql_database_instance" "this" {
@@ -23,6 +56,15 @@ resource "google_sql_database_instance" "this" {
     # only stops Terraform, this one makes the Cloud SQL API itself refuse to
     # delete the instance until the flag is turned off and applied.
     deletion_protection_enabled = var.deletion_protection_enabled
+
+    dynamic "database_flags" {
+      for_each = local.database_flags
+
+      content {
+        name  = database_flags.key
+        value = database_flags.value
+      }
+    }
 
     ip_configuration {
       ipv4_enabled    = var.ipv4_enabled
